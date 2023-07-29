@@ -1,0 +1,97 @@
+---
+title: "Taller Día 1"
+author: "Jemp"
+date: "21/10/2021"
+output:
+   html_document:
+     toc: true
+     toc_float: true
+     number_sections: true
+     theme: journal
+     highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Objetivo
+Análisis de los mercados financieros a través de R.
+
+
+# Librerías
+```{r}
+library(quantmod) # permite vincular R con algunos portales de finanzas como Yahoo Finance
+library(fBasics) # estadísticos
+library(psych) # estadísticos
+library(readxl) # para poder importar datos de excel
+library(writexl) # para exportar objetos a excel
+library(stats) # estadísticos
+library(nortest) # para aplicar pruebas de normalidad
+library(imputeTS) # permite interpolar datos
+library(scales) # permite ponerle caracteres especializados a los resultados
+```
+
+# Arreglo de Datos
+```{r}
+getSymbols(Symbols= c("MXN=X", "BRL=X", "EURUSD=X"), from="2019-01-01", to="2021-09-30",
+           periodicity= "daily", src= "yahoo")
+```
+
+```{r}
+divisas<-Ad(merge(`MXN=X`,`BRL=X`,`EURUSD=X`))
+```
+
+```{r}
+names(divisas)<-c("USDMXN","USDBRL","EURUSD")
+```
+
+Arreglos Matriciales: [n,m] ... n renglones, m columnas
+
+
+##Verificación de espacios en blanco (NA)
+```{r}
+divisas[!complete.cases(divisas),]
+```
+
+```{r}
+divisas.na<-na.omit(divisas)
+```
+
+# Visualización
+## Peso Mexicano
+```{r}
+plot(divisas.na$USDMXN, type="l", main="Tipo de Cambio USDMXN")
+```
+
+```{r}
+plot(divisas.na$USDBRL, type="l", main="Tipo de Cambio USDBRL", col="blue")
+```
+
+```{r}
+plot(divisas.na$EURUSD, type="l", main="Tipo de Cambio EURUSD", col="red")
+```
+
+
+## Histogramas
+```{r}
+hist(divisas.na$USDMXN, main="Histograma de Frecuencias", ylab="Frecuencia", xlab= "USDMXN")
+```
+
+```{r}
+library(ggExtra)
+library(ggplot2)
+```
+
+```{r}
+divisas.df<-data.frame(divisas.na)
+```
+
+
+```{r}
+## aes  quiere decir aesthetics
+h.mxnbrl <- ggplot(divisas.df, aes(x=USDMXN, y=USDBRL)) + geom_point() + theme_classic()
+ggMarginal(h.mxnbrl, type= "histogram")
+h.mxnbrl
+```
+

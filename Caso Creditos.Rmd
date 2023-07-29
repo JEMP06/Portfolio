@@ -1,0 +1,203 @@
+---
+title: "Caso Creditos"
+author: "Jemp"
+date: "26/10/2021"
+output:
+   html_document:
+     toc: true
+     toc_float: true
+     number_sections: true
+     theme: journal
+     highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "Images_Día04/")
+```
+
+#Caso de Negocio
+Cierta institución financiera te ha encargado analizar su base de datos referente al otorgamiento de créditos. En una primera etapa de análisis (descriptivo), se requieren los estadisticos basicos y apoyos visuales para poder identificar posibles patrones. En una segunda etapa, se construirá un modelo predictivo que soporte el análisis descriptivo.
+
+# Estadisticos Descriptivos
+## Lectura de Datos
+
+```{r}
+library(foreign)
+library(scales)
+```
+
+```{r}
+## Esta instrucción nos permite descargar los Datos en R
+datacreditos<-read.spss("datacreditos.sav",to.data.frame=TRUE)
+```
+
+```{r}
+str(datacreditos)
+```
+
+```{r}
+lts<-summary.factor(datacreditos$Loan_Type)
+lts
+lt.car<-lts["Car "]
+lt.car
+lt.home<-lts["Home"]
+lt.home
+```
+
+## Media del Ingreso Neto de los Usuarios
+
+```{r}
+## Se escribe $ para especificar la columna o variabale del objeto datacreditos
+inc.mean<-dollar(mean(datacreditos$Income))
+inc.min<-dollar(min(datacreditos$Income))
+inc.max<-dollar(max(datacreditos$Income))
+inc.mean
+inc.min
+inc.max
+```
+
+## Score crediticio por género e ingerso
+```{r}
+## De forma similar, el $ "barre" la columna Credit_score
+meanscore<-mean(datacreditos$Credit_score)
+meanscore
+```
+ 
+```{r}
+minsc<-min(datacreditos$Credit_score)
+maxsc<-max(datacreditos$Credit_score)
+minsc
+maxsc
+```
+
+```{r}
+## Queremos conocer a que género corresponde el score crediticio mínimo
+minsc.gender<-datacreditos[datacreditos$Credit_score==minsc, "Gender"]
+minsc.gender
+```
+
+```{r}
+## Queremos conocer a que género corresponde el score crediticio máximo 
+maxsc.gender<-datacreditos[datacreditos$Credit_score==maxsc, "Gender"]
+maxsc.gender
+```
+
+```{r}
+minsc.income<-datacreditos[datacreditos$Credit_score==minsc, "Income"]
+minsc.income 
+```
+
+```{r}
+maxsc.income<-datacreditos[datacreditos$Credit_score==maxsc, "Income"]
+maxsc.income 
+```
+
+```{r}
+males.creditos<-sum(datacreditos$Gender=="Male  ")
+males.creditos
+```
+
+```{r,include=FALSE}
+## Se requiere la paquetería "dplyr"
+## Utilizaremos las funciones "select" y "subset" para seleccionar dos variables del objeto datacreditos, ## Y crear un subgrupo con dos variables, especificando a Male
+males.sc<-subset(datacreditos, Gender=="Male  ",select = c(Credit_score,Income,Gender))
+males.sc
+```
+
+```{r,include=FALSE }
+female.sc<-subset(datacreditos, Gender=="Female",select = c(Credit_score,Income))
+female.sc
+```
+
+```{r}
+## Creamos un objeto con dos variables
+gender.sc<-subset(datecreditos,select = c(Credit_score,Gender))
+```
+
+```{r,include=FALSE}
+## Otra alternativa para crear un subgrupo sin utilizar las funciones "subset" y "select"
+gender.sc<-datacreditos[c("Credir_score","Gender")]
+gender.sc
+```
+
+## Porcentaje de buenos créditos de hombres
+
+```{r}
+library(formattable)
+```
+
+```{r}
+males.sc.good<-sum(males.sc$Credit_score>700)
+males.sc.good
+perc.sc.good<-percent(males.sc.good/males.creditos)
+perc.sc.good
+```
+
+## Porcentaje de buenos créditos de mujeres
+
+```{r}
+female.creditos<-sum(datacreditos$Gender=="Female")
+female.creditos
+```
+
+```{r}
+female.sc.good<-sum(female.sc$Credit_score>700)
+female.sc.good
+perc.female.good<-percent(female.sc.good/female.creditos)
+perc.female.good
+```
+
+## Score crediticio por tipo de préstamo
+```{r}
+loan.car<-subset(datacreditos,Loan_Type=="Car",select=c(Loan_Type,Credit_score))
+min.lcar<-min(loan.car$Credit_score)
+miax.lcar<-min(loan.car$Credit_score)
+```
+
+```{r}
+loan.home<-subset(datacreditos,Loan_Type=="Home",select = c(Loan_Type,Credit_score))
+min.lhom<-min(loan.home$Credit_score)
+max.lhom<-max(loan.home$Credit_score)
+min.lhom
+max.lhom
+```
+
+## Score crediticio y nivel académico
+
+```{r}
+grad.degree<-sum(datacreditos$Degree=="Graduate") ## No. de clientes con Posgrado
+grad.degree
+```
+
+```{r}
+csgrad<-subset(datacreditos,Degree=="Graduate",select=c(Credit_score,Degree))
+csgrad.fair<-sum(csgrad$Credit_score>700)
+csgrad.fair
+```
+
+```{r}
+pgradcs<-percent(csgrad.fair/grad.degree)
+pgradcs
+```
+
+
+#Visualización
+Graficaremos utilizando ggplot
+```{r}
+library(ggplot2)
+library(scales)
+```
+
+## Graficado de ingreso y score crediticio por tipo de crédito
+```{r}
+## aes=aestethics
+lt.csin.plot<-ggplot(datacreditos,aes(x=Income,y=Credit_score,color=as.character(Loan_Type))) + geom_point() + labs(x="Nivel de Ingreso Neto", y="Score Crediticio") + ggtitle("Figuara 1. scatterplot del score crediticio e ingreso neto según tipo de préstamo")
+lt.csin.plot 
+```
+
+## Graficado de ingreso y score crediticio por grado acádemico
+```{r}
+deg.csin.plot<-ggplot(datacreditos,aes(x=Income,y=Credit_score,color=as.character(Degree))) + geom_point() +labs(x="Nivel de Ingreso Neto", y="Score Crediticio") + ggtitle("Figura 2. Scatterplot del score crediticio e ingreso según grado acádemico")
+deg.csin.plot
+```
+
