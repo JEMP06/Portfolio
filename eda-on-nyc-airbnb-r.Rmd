@@ -1,0 +1,758 @@
+
+---
+title: "**EDA on NYC Airbnb [ R ]**"
+subtitle: "***NYC Airbnb Exploration***"
+author: "**[Jayprakash Kumar](https://bit.ly/43CtUP2)**"
+date: "`r Sys.Date()`"
+output: 
+  html_document :
+    code_folding: "hide"
+    theme: cerulean
+    highlight: tango
+    df_print: paged
+    toc: yes
+    toc_float:
+      collapsed: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+\
+
+------ 
+
+**Changelog:**
+        + There is no date beyond 2023.
+        + Added Boxplot Prices.
+        + Scientific Notation Fixed.
+
+
+------ 
+
+
+> Description :
+
+
+
+* Airbnb is a platform that allows house and apartment owners to rent their properties to guests for short-term stays. 
+    
+    + **Since 2011,** hosts have been using Airbnb. This dataset describes the listing activity and metrics in NYC for **2023.**
+
+
+![NYC](https://i.imgur.com/aMrUILs.jpeg)
+
+\
+
+------ 
+
+>### **PHASE 1 : Ask**
+
+* About the company:
+
+    + Airbnb, Inc is an American San Francisco-based company operating an online marketplace for short- and long-term homestays and experiences. 
+    
+      - The company was founded in 2008 by ***Brian Chesky, Nathan Blecharczyk, and Joe Gebbia.***
+      
+      - Since it was founded in 2008, Airbnb has become one of the most successful and valuable start-ups in the world and has significantly impacted the **HORECA** (hotel, restaurant, and catering) industry.
+
+\
+
+* Content:
+
+    + This Dataset includes information about hosts, geographical availability, and necessary metrics to draw data-driven decision-making.
+    
+    \
+    
+  > ***Key task :***
+
+    + Identified the business task.
+    + Considered key stakeholders.
+    
+    \
+    
+  > ***Deliverable :***
+
+    + To gain insights from Data to solve business problem.
+
+\
+
+------ 
+
+>### **PHASE 2 : Prepare**
+
+
+
+* Before we begin, there are few key points that are wrapped below as these are the **vital steps** I'll be following to ensure its **completion:**
+
+\
+
+
+
+
+![](https://i.imgur.com/sOng5dO.png) 
+
+\
+
+
+* This is a **Public Dataset** is part of Airbnb, and the original source can be found on **[InsideAirbnb](http://insideairbnb.com/).**
+
+    + Downloaded the data and stored it on my [Google Drive](https://bit.ly/3NAsYo2)
+    
+    + The data has been made available by Inside Airbnb with [No Copyright CC0: Public Domain](http://insideairbnb.com/data-policies/)
+
+\
+
+* Using the **ROCCC System** to determine the credibility and integrity of the data.
+
+    + **Reliability:** This data is reliable. This public dataset is a subset of Airbnb data and is made available for public use.
+
+    + **Originality:** This is Original subset dataset.
+
+    + **Comprehensiveness:** This data is comprehensive. It provides comprehensive information about Airbnb listings, hosts, and various metrics for analysis and research purposes.
+
+    + **Current:** A recent dataset, which is current.
+
+    + **Cited:** Inside Airbnb created the dataset, made it Public Dataset so this is Credible
+
+        - Therefore, the data is not Biased And have full credibility for the same reason. It meets **ROCCC System** since it’s reliable, original, comprehensive, current and cited.
+
+    \
+    
+  > ***Key task :***
+
+    + Downloaded data and stored it appropriately.
+    + Identified how it’s organized.
+    + Determined the credibility of the data.
+    + Considered key stakeholders.
+    
+    \
+    
+  > ***Deliverable :***
+
+    + This dataset describes the listing activities for NYC from **2011 - 2023.**
+    
+\
+
+------ 
+
+
+>### **PHASE 3 : Process**
+
+
+* I am using **R** since it is an Advanced Language that performs various complex ***Statistical computations, Analysis, Mining..*** Therefore, it is widely used by ***Data Scientists.*** Hence, I chose **R.**
+
+
+\
+
+* Dependencies :
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("dplyr")
+# install.packages("skimr")
+# install.packages("mice")
+# install.packages("randomForest")
+# install.packages("corrplot")
+# install.packages("ggcorrplot")
+
+```
+
+* Libraries :
+
+```{r message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(skimr)
+library(mice)
+library(randomForest)
+library(corrplot)
+library(ggcorrplot)
+```
+
+* Working Directory : 
+
+```{r}
+list.files(path = "/kaggle/input/new-york-city-airbnb-2023-public-data")
+```
+
+* Data Collection :
+
+```{r}
+nyc_list <- read.csv("/kaggle/input/new-york-city-airbnb-2023-public-data/NYC-Airbnb-2023.csv")
+```
+
+* Data Wrangling :
+
+    + Ensured Data’s integrity.
+    + Ensured column(s) name consistent.
+    
+```{r}
+nyc_list
+```
+
+* A quick summary before proceeding :
+
+```{r}
+summary(nyc_list) 
+```
+
+* Renaming few columns to understand the data more easily :
+
+```{r}
+nyc_df <- nyc_list %>% 
+  rename(list_id = id,
+                listing_name = name,
+                area = neighbourhood_group,
+                geo_location = neighbourhood,
+                host_list_count = calculated_host_listings_count,
+                reviews_per_year = number_of_reviews_ltm,
+                reviews_per_month_pct = reviews_per_month) %>% 
+  select(-license)
+nyc_df 
+```
+
+* Removed 'license' column since it had only one value for one host id
+    + missing & empty values in dataset
+    
+```{r}
+skim_without_charts(nyc_df)
+```
+
+* Changed datatype for **last_review** :
+
+```{r}
+nyc_df$last_review <- as.Date(nyc_df$last_review)
+```
+
+* Replacing missing value with **NA** :
+
+```{r}
+nyc_df[nyc_df==""] <- NA
+```
+
+* Data Imputation needed since everything looks good but these two columns :
+     + changed datatypes before using mice ;
+     
+```{r}
+nyc_df$reviews_per_year <- as.integer(nyc_df$reviews_per_year)
+nyc_df$last_review <- as.integer(nyc_df$last_review)
+nyc_df <- as.data.frame(nyc_df)
+skim_without_charts(nyc_df)
+```
+
+* Classification and Regression Using Mice, method **cart**.
+    + For **last_review & reviews_per_month_pct**.
+
+```{r}
+mice_date <- mice(nyc_df, m = 10, method = "cart")
+nyc_df <- complete(mice_date)
+```
+
+* Formatting Data Types & Mutating New Column :
+
+```{r}
+nyc_df$last_review <- as.Date(nyc_df$last_review, origin="2011-05-12")
+nyc_df$year <- format(as.Date(nyc_df$last_review), "%Y")
+```
+
+
+* Replicating to new dataframe :
+
+```{r}
+test_com <- nyc_df 
+skim_without_charts(test_com)
+```
+
+* Done Process part.
+
+\
+    
+> ***Key task :***
+
++ **Imputed by classification and regression trees.**
+    + Manipulated **empty** data.
+    + Imputed **missing** data.
++ Renamed columns for better data understanding.
++ Converted Data Types.
+    + Created fresh data frame.
+    + **listing_name** has 10 missing values & **host_name** has 5 missing values.
+    
+
+    
+> ***Deliverable :***
+
++ The dataset is ready for **Analysis.**
+    
+\
+
+------ 
+
+
+>### **PHASE 4 : Analysis**
+
+* Descriptive analyses are being used to summarize and explore the
+behavior of the data. 
+
+    + Using statistical techniques to understand the pattern.
+
+
+* Total Hosts 
+    + There are **27455** unique **host_id**
+    + **42931** Total columns
+
+```{r}
+n_unique(test_com$host_id) 
+dim(test_com)
+```
+
+* Price
+    + As minimum price listed **$0**
+    + As average price **$200**
+    + As maximum price **99000**
+    + As median price **125**
+    
+
+```{r}
+summary(test_com$price)
+```
+
+* Removing all the rows containing **0** price since it's not making sense.
+    + Now minimum price listed **$10**
+        - **27430** unique **host_id**
+        - **42904** Total columns
+
+```{r}
+test_com <- test_com %>% 
+  filter(price > 5)
+summary(test_com$price)
+```
+
+* Minimum night
+    + As minimum night **1**
+    + As average night **18**
+    + As maximum night **1250**
+    + As median night **7**
+    
+```{r}
+summary(test_com$minimum_nights)
+```
+
+* number of reviews made by host_id
+    + **0** to **1842**
+
+```{r}
+summary(test_com$number_of_reviews)
+```
+
+* Area 
+    + **Bronx** has **1691** listings
+    + **Brooklyn** has **16237** listings
+    + **Manhattan** has **17658** listings
+    + **Queens** has **6916** listings
+    + **Staten Island** has **429** listings
+
+```{r}
+table(test_com$area)
+```
+
+* Room Types
+    + **Entire home/apt** has **24279** listings
+    + **Hotel room** has **197** listings
+    + **Private room** has **17879** listings
+    + **Shared room** has **576** listings
+
+```{r}
+table(test_com$room_type)
+```
+
+
+
+* number of total lists made in cities
+
+```{r}
+area_freq <- test_com %>% 
+  group_by(area) %>% 
+  summarise(total_list = sum(host_list_count))%>% 
+  mutate(percent = total_list *100 / sum(total_list))
+area_freq
+```
+
+* price range frequency
+
+```{r}
+price_freq <- test_com %>%
+  mutate(price_range = case_when(price > 5 & price < 50 ~ "10 - 49",
+                                 price >= 50 & price < 100 ~ "50 - 99",
+                                 price >= 100 & price < 200 ~ "100 - 199",
+                                 price >= 200 & price < 300 ~ "200 - 299",
+                                 price >= 300 & price < 1000 ~ "301 - 999",
+                                 price >= 1000 ~ "above 1000")) %>% 
+  group_by(price_range) %>% 
+  summarise(total_list = sum(host_list_count)) %>% 
+  mutate(percent = total_list *100 / sum(total_list)) %>% 
+  arrange(price_range)
+price_freq
+```
+
+* total listing with price grouped by geolocation area
+
+```{r message=FALSE}
+geo_area_freq <- test_com %>%
+  group_by(geo_location, area) %>% 
+  summarise(total_list = sum(host_list_count),
+            min_price = min(price),
+            avg_price = mean(price),
+            max_price = max(price),
+            most_price = median(price))
+geo_area_freq
+```
+
+* total listing with room_type grouped by years
+
+```{r message=FALSE}
+year_room_freq <- test_com %>% 
+  group_by(year, room_type) %>% 
+  summarise(total_list = sum(host_list_count),
+            reviews_per_year = sum(reviews_per_year))%>% 
+  mutate(percent = 100* reviews_per_year/sum(reviews_per_year))
+year_room_freq
+```
+
+* total listings made by host_name
+
+```{r message=FALSE}
+host_list_count_total <- test_com %>% 
+  group_by(host_name) %>% 
+  summarise(total_list_count = sum(host_list_count)) %>% 
+  arrange(desc(total_list_count))
+host_list_count_total
+```
+
+* total pricing listed by host_name
+
+```{r message=FALSE}
+host_price_total <- test_com %>% 
+  group_by(host_name) %>% 
+  summarise(total_price = sum(price)) %>% 
+  arrange(desc(total_price))
+host_price_total
+```
+
+* total pricing listed by host_name by Room types
+
+```{r}
+host_room_total <- test_com  %>% 
+  select(host_name, room_type, price) %>% 
+  group_by(host_name, room_type) %>% 
+  summarise(total_price = sum(price)) %>% 
+  arrange(desc(total_price))
+host_room_total
+```
+
+* room type with price by areas :
+
+```{r}
+room_price_freq <- test_com %>% 
+  select(room_type, area, price, host_list_count) %>% 
+  group_by(room_type) %>% 
+  summarise(min_price = min(price), 
+            avg_price = mean(price), 
+            most_price = median(price),
+            max_price = max(price),
+            total_list = sum(host_list_count)) %>% 
+  mutate(list_percent = total_list * 100 / sum(total_list))
+```
+
+
+
+\
+
+------ 
+
+>### **PHASE 5 : Visualization**
+
+
+* Creating a new data frame for Correlation matrix
+    + formatted as numeric
+
+```{r}
+corr_df <- test_com %>% 
+  select(list_id, host_id, price, minimum_nights,
+         number_of_reviews, last_review, reviews_per_month_pct,
+         host_list_count, reviews_per_year, availability_365, year)
+
+corr_df$year <- as.numeric(corr_df$year)
+corr_df$last_review <- as.numeric(corr_df$last_review)
+str(corr_df)
+```
+
+* Correlation matrix 
+
+```{r}
+corrplot(cor(corr_df), method = "circle")
+ggcorrplot(cor(corr_df), hc.order = T, type = "lower",
+           lab = T)
+```
+
+
+* Total listing made by Host at Cities based 
+    + Area ~ Total list Frequency
+        - **Manhattan** alone has **62.5 %** of total listings
+        - **Brooklyn** has **22.1 % **
+        - **Queens** has **14.6 %**
+        - **Bronx** has **0.49 %**
+        - **Staten Island** has **0.11 %**
+
+
+```{r}
+area_freq %>% 
+  ggplot(aes(area, total_list, fill= area)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label = total_list), vjust = 0) +
+  guides(fill = guide_legend(title = "Area")) +
+  theme(legend.position = "none") +
+  labs(x = "Cities",
+       y = "Total Listings",
+       title = "Total Listings made at Cities :",
+       caption = "Data Analyst : JP")  + theme_minimal() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(legend.position = "none")
+```
+
+\
+
+* Host Listing with Room Types
+
+![Room Types at NYC by Cities](https://i.imgur.com/BUbr5uz.png)
+
+\
+
+
+
+
+* A simple visualization on total listings by price range
+
+
+```{r}
+price_freq %>% 
+  ggplot(aes(price_range, total_list, fill = total_list)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label = total_list), vjust = 0) +
+  scale_y_continuous(labels = scales::comma) +
+  guides(fill = guide_legend(title = "Total Lists")) +
+  theme(legend.position = "none") +
+  labs(x = "Price Range",
+       y = "Total Listings",
+       title = "Price Range for Total listings :",
+       subtitle = "cheap airbnb price range",
+       caption = "Data Analyst : JP") + theme_minimal() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(legend.position = "none")
+```
+
+
+* Boxplot for Room types on listed Price 
+    + Assumed outliers as **True Outliers.** Since its validates **ROCCC System**
+    + we can see those outliers.
+    + I did limit the price range to **$10,000.**
+
+
+```{r}
+
+
+ggplot(test_com, aes(x = room_type, y = price)) +
+  geom_boxplot(aes(fill = room_type)) + scale_y_log10(limits = c(1, 10000), labels = scales::comma) +
+  geom_hline(yintercept = mean(test_com$price), color = "purple", linetype = 6) +
+  annotate("text", x = 1,
+           y = median(test_com$price[test_com$room_type == "Entire home/apt"]), 
+           label = round(median(test_com$price[test_com$room_type == "Entire home/apt"]), 2), 
+           size = 5, color = "white") +
+  annotate("text", x = 2, 
+           y = median(test_com$price[test_com$room_type == "Hotel room"]), 
+           label = round(median(test_com$price[test_com$room_type == "Hotel room"]), 2), 
+           size = 5, color = "red") +
+  annotate("text", x = 3, 
+           y = median(test_com$price[test_com$room_type == "Private room"]), 
+           label = round(median(test_com$price[test_com$room_type == "Private room"]), 2), 
+           size = 5, color = "lightgreen") +
+  annotate("text", x = 4, 
+           y = median(test_com$price[test_com$room_type == "Shared room"]), 
+           label = round(median(test_com$price[test_com$room_type == "Shared room"]), 2), 
+           size = 5, color = "green") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Room Type",
+       y = "Price",
+       title = "Price Distribution by Room Type :",
+       caption = "Data Analyst : JP") 
+```
+
+
+
+
+
+* Room Types by Average Price Filled with Median Price Listings 
+    + A clear view on average price vs median price listing
+
+```{r}
+
+room_price_freq %>% 
+  ggplot(aes(room_type, avg_price, fill = room_type)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_y_continuous(labels = scales::comma) +
+  guides(fill = guide_legend(title = "Most Price")) +
+  geom_text(aes(label = most_price), vjust = 0) +
+  theme(legend.position = "none") +
+  labs(x = "Room Types",
+       y = "Average Price",
+       title = "Room Types with Average Price :",
+       subtitle = "Median Price floating for Room Types",
+       caption = "Data Analyst : JP") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(legend.position = "none")
+```
+
+* Host Listing with Average Price By Cities
+
+![Average Price Listed at NYC by Cities](https://i.imgur.com/QOmMpne.png)
+
+
+
+
+* Total Listings made over Years :
+    + Since **2017** hosts liked the idea of **Airbnb**
+    + A clear view on listings made over period of years.
+        - Shared Room has almost no impact over years.
+
+```{r}
+year_room_freq %>% 
+  ggplot(aes(year, total_list, color = room_type)) +
+  scale_y_continuous(labels = scales::comma) +
+  geom_point(size = 2, alpha = 10) +
+  labs(x = "Years",
+       y = "Total Listings",
+       title = "Total Listings made over Years :",
+       subtitle = "",
+       caption = "Data Analyst : JP")  +
+  theme_minimal()
+```
+
+* Top 5 Listings by Host Names :
+    + Top 1 host is **Blueground** created listings over **276676**
+
+```{r}
+host_list_count_total %>% 
+  slice(1:5) %>% 
+  ggplot(aes(host_name, total_list_count, fill = host_name)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label = total_list_count), vjust = 0) +
+  theme(legend.position = "none") +
+  labs(x = "Host Name",
+       y = "Total Listings",
+       title = "Top 5 Listings by Hosts",
+       subtitle = "",
+       caption = "Data Analyst : JP")  +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(legend.position = "none")
+
+
+```
+
+* Top Prices by Host Names :
+    + Top 1 host is **RoomPicks** listed total Price of **318578 $** 
+        - where **Blueground** is on second position for **175662 $**
+
+
+
+```{r message=FALSE}
+host_room_total %>% 
+  filter( total_price >= 52089) %>% 
+  ggplot(aes(total_price, host_name, fill = total_price)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_fill_steps2() +
+  geom_text(aes(label = total_price), vjust = 0) +
+  theme(legend.position = "none") +
+  labs(x = "Total Price in $ ",
+       y = "Host Name",
+       color = "Room Type",
+       title = "Top Prices by Host Names",
+       subtitle = "",
+       caption = "Data Analyst : JP") +
+  theme_minimal() +
+  theme(legend.position = "none")
+  
+
+```
+
+* Sum of Total Price by Host Listing based on Cities :
+
+![Total Price Listed at NYC by Cities](https://i.imgur.com/ubfiMqf.png)
+
+
+
+* Reviews per month by years :
+
+
+```{r message=FALSE, warning=FALSE}
+test_com %>% 
+  ggplot(aes(reviews_per_month_pct, reviews_per_year, color = room_type)) +
+  geom_point(size = 2, alpha = 0.8)   +
+  geom_smooth(method = 'lm' , se = F, color = 'purple') +
+  labs(x = "Reviews per Month PCT",
+       y = "Reviews per Year",
+       color = "Room type",
+       title = "Airbnb's Reviews per Month by Year:",
+       subtitle = "Linear Regression Model has 'Strog' fit",
+       caption = "Data Analyst : JP") +
+  annotate("text", x= 15, y= 900, label = "R^2 =  0.73", color = "darkgreen",
+           fontface = "bold", size = 5, angle = 25 ) +
+  theme_minimal()
+
+```
+
+
+
+
+\
+
+------ 
+
+>### **PHASE 6 : Act**
+
+* ***The act phase would be done by the Executive team of the company. So,Passing the Documented Report to The Director and the Team.***
+
+\
+
+* ***Data-Driven Decision-Making : ***
+
+* ***Blueground $ RoomPicks are the Top 2 Hosts in NYC made **175662 $** $ **318578 $** Respc.***
+* ***Blueground made maximum listings among other hosts in NYC for over **276676** listings .***
+* ***Since **2017** hosts liked the idea of **Airbnb**, A progressive graph for Airbnb. ***
+* ***Hotel Rooms are the most Expensive on average price***
+* ***Manhattan** alone has **62.5 %** of total listings***
+
+\
+
+* ***Suggestion(s) :*** 
+
+* ***Except Hotel Rooms, Rests are the cheapest, and travellers will like it***
+* ***Travellers will like **Bronx** to stay since it can roam the city and even has lowest average price rated among others.***
+* ***Staten Island has low crowd but higher average price for travellers to stay, those want less crowd can go for Staten Island***
+\
+
+    + THANK YOU
+    \
+    
+        - **[Jayprakash Kumar](https://www.linkedin.com/in/15mmerits/)**
+      
+
+
+
+
