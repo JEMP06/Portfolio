@@ -1,0 +1,487 @@
+---
+title: "Sesion 3 / Basic EDA R"
+subtitle: "By Jorge Enrique Madariaga Puertas"
+format:
+  html:
+    theme: cosmo
+    toc: true   #Table Of Contents (Índice)
+    code-fold: true
+    code-tools: true
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+# SESIÓN 3: ANÁLISIS EXPLORATORIO DE DATOS  ###############
+
+- Ejemplo 1 Tipos de variables y escalas de medición
+- Ejemplo 2 Tablas de distribución de frecuencias
+- Ejemplo 3 Medidas descriptivas
+- Ejemplo 4 Histogramas y boxplots
+- Ejemplo 5 Gráficas de dispersión y correlación
+- Reto 1 Tablas de distribución de frecuencias
+- Reto 2 Medidas descriptivas
+
+```{r echo=TRUE, include = FALSE}
+#pacman::p_load(dplyr, DescTools, ggplot2, moments)
+
+library(dplyr)
+library(DescTools)
+library(ggplot2)
+library(moments)
+```
+
+## EJEMPLO 1: TIPOS DE VARIABLES Y ESCALAS DE MEDICIÓN
+A nivel estadístico, existen dos tipos de variables con distintas escalas de medición:
+  - Cualitativas: Aquellas que describen una cualidad de la observación
+        - Nominales: El orden de la cualidad no es importante
+        - Ordinales: El orden de la cualidad sí es importante
+        
+  - Cuantitativas: Aquellas que rdescriben una cantidad relacionada con la observación.
+      estas pueden ser de intervalo o razón.
+        - Discretas: Resultan de un proceso de conteo
+        - Continuas: Resultan de un proceso de medición
+
+
+```{r}
+var <- read.csv("https://raw.githubusercontent.com/beduExpert/Programacion-R-Santander-2022/main/Sesion-03/Data/variables.csv")
+```
+
+```{r}
+str(var)
+```
+
+```{r}
+summary(var)
+```
+
+Vamos a transformar las variables a su tipo y escala correspondiente
+```{r}
+var$SEXO <- factor(var$SEXO)
+var$ESTUDIOS <- factor(var$ESTUDIOS, levels = c("Primaria", "Bachillerato", "Licenciatura", "Maestria"), ordered = TRUE)
+var$NIVEL_SOCIOECO <- factor(var$NIVEL_SOCIOECO, levels = c("Bajo", "Medio", "Alto"), ordered = TRUE)
+var$MEDIO_CONTACTO <- factor(var$MEDIO_CONTACTO)
+var$ACTIVO <- factor(var$ACTIVO, labels = c("No", "Si"))
+```
+
+```{r}
+View(var)
+```
+
+```{r}
+summary(var)
+```
+## EJEMPLO 2: TABLAS DE DISTRIBUCIÓN DE FRECUENCIAS
+
+#### Objetivo
+- Crear e interpretar tablas de distribución de frecuencias para variables cualitativas y cuantitativas
+- Entender la diferencia entre frecuencia absoluta y relativa
+
+#### Requisitos
+- Tener previamente instalados R y Rstudio
+- Manipulación de datos con R
+- Lectura de ficheros
+
+#### Desarrollo
+
+El objetivo principal de la estadística descriptiva, es presentar, de forma sintetizada, 
+la información para su correcto análisis.
+
+Vamos a comenzar con métodos tabulares para presentar un resumen de la información:
+
+
+```{r}
+freq <- table(var$ESTUDIOS)
+```
+
+```{r}
+freq2 <- transform(freq, 
+          rel.freq=prop.table(Freq))
+freq2
+```
+
+
+```{r}
+ggplot(var, aes(x = ESTUDIOS)) +
+  geom_bar()
+```
+
+Hacer este mismo análisis para variables cuantitativas puede resultar en una tabla 
+de frecuencias muy larga y poco informativa (¿por qué?). En su lugar, debemos realizar
+clases o intervalos con rangos específicos.
+
+Vamos a comenzar por calcular el número de clases y el ancho de la clase:
+```{r}
+k = ceiling(sqrt(length(var$INGRESO)))
+k
+```
+
+
+```{r}
+ac = (max(var$INGRESO)-min(var$INGRESO))/k
+ac # ac = tamaño de cada intervalo
+```
+
+Ahora vamos a crear una secuencia que vaya del valor mínimo al máximo con el ancho 
+de clase. Esto nos va a permitir hacer cortes con las clases correspondientes:
+```{r}
+bins <- seq(min(var$INGRESO), max(var$INGRESO), by = ac)
+bins #bins= secuencia
+```
+
+
+```{r}
+ingreso.clases <- cut(var$INGRESO, breaks = bins, include.lowest=TRUE, dig.lab = 8)
+ingreso.clases
+```
+
+Con esto, podemos crear nuestra tabla de distribución de frecuencias:
+```{r}
+dist.freq <- table(ingreso.clases)
+transform(dist.freq, 
+          rel.freq=prop.table(Freq), 
+          cum.freq=cumsum(prop.table(Freq)))
+```
+
+## RETO 01: TABLAS DE DISTRIBUCIÓN DE FRECUENCIAS
+
+#### Objetivo
+- Utilizar tablas de distribución de frecuencias para analizar variables  
+
+#### Requisitos
+- Tener previamente instalados R y Rstudio
+- Manipulación de datos
+- Gráficas y atributos
+
+#### Desarrollo
+```{r}
+library(ggplot2)
+```
+
+Para este reto vamos a hacer uso del dataframe `diamonds`, disponible en la librería 
+de `ggplot2`. Realiza los siguientes incisos y responde a las preguntas:
+
+```{r}
+View(diamonds)
+```
+
+```{r}
+str(diamonds)
+```
+```{r}
+head(diamonds)
+```
+```{r}
+# Otra forma de hacer una tabla de frecuencias sin programar las clases es:
+dfd<- diamonds %>%
+  group_by(cut)  %>%
+  summarise(frecuencia = n())  %>%
+  mutate(rel_freq = round (frecuencia/sum(frecuencia), 1),
+         frec_acum = cumsum(frecuencia))
+dfd
+```
+
+## EJEMPLO 3: MEDIDAS DESCRIPTIVAS
+
+#### Objetivo
+- Conocer e interpretar las medidas de tendencia central, dispersión, posición y forma
+
+#### Requisitos
+- Tener previamente instalados R y Rstudio
+- Tener conceptos básicos de gráficación 
+- Haber realizado el prework
+
+#### Desarrollo
+```{r}
+df <- read.csv("https://raw.githubusercontent.com/beduExpert/Programacion-R-Santander-2022/main/Sesion-03/Data/telecom_service.csv")
+summary(df)
+```
+
+##### Medidas de tendencia central
+```{r}
+mean(df$total_day_calls)
+mean(df$total_day_calls, trim = 0.20)
+
+median(df$total_day_calls)
+
+Mode(df$total_day_calls)
+```
+
+##### Medidas de dispersión
+```{r}
+var(df$total_day_calls)
+sd(df$total_day_calls)
+
+IQR(df$total_day_calls) #Dispersión alrededor a la mediana
+iqr = quantile(df$total_day_calls, probs = 0.75) - quantile(df$total_day_calls, probs = 0.25)
+iqr
+```
+
+##### Medidas de posición (CuaNtiles)
+###### CuaRtiles (Separan la distribución de los datos en 4 partes de 25% cada una)
+q1, q2 y q3
+###### Deciles (Separan la distribución de los datos en 10 partes de 10% cada una)
+d1, d2, d3, d4, d5, d6, d7, d8, d9
+###### Percentiles o centiles (Separan la distribución de los datos en 100 partes de 1% cada una) 
+p1, p2, p3, ... p10, ... p20, ..., p25, ... , p50, p75, ... p99
+
+###### Equivalencias
+d1 = p10 (En general dk = p(k*10) para toda k = 1, ... 9)
+q1 =  p25
+q2 = d5 = p50 (= mediana)
+q3 = p75
+
+```{r}
+cuartiles <- quantile(df$total_day_calls, probs = c(0.25, 0.50, 0.75))
+cuartiles
+
+deciles <-quantile(df$total_day_calls, probs = c(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9))
+deciles
+
+percentiles <- quantile(df$total_day_calls, probs = seq(0.01,0.99, by=0.01))
+percentiles
+```
+
+##### Medidas de forma
+Sesgo: Nos permite ver si los datos se encuentran de forma simétrica alrededor de la media 
+Curtosis: Nos permite tener una idea de qué tan concentrados se encuentran los datos alrededor 
+de la media
+```{r}
+d <- read.csv("https://raw.githubusercontent.com/beduExpert/Programacion-R-Santander-2022/main/Sesion-03/Data/distribuciones.csv")
+
+skewness(d$rs) #s > 0 Sesgo a la derecha
+skewness(d$sim) #s = 0 Simétrica
+skewness(d$ls) #s < 0 Sesgo a la izquierda
+
+kurtosis(d$rs) #Leptocúrtica k > 3
+kurtosis(d$sim) #Mesocúrtica k = 3
+                #Platocúrtica k < 3
+```
+
+## EJEMPLO 4: HISTOGRAMAS Y BOXPLOTS
+
+#### Objetivo
+- Generar y comprender los gráficos de tipo boxplot
+- Introducción a la distribución de los datos con histogramas
+
+#### Requisitos
+- Tener previamente instalados R y Rstudio
+- Lectura de ficheros CVS
+- Nociones básicas de ggplot
+
+#### Desarrollo
+
+Un histograma es una gráfica de barras en donde el eje horizontal representa los 
+intervalos de cases y el eje vertical representa frecuencias (absolutas o porcentuales)
+```{r}
+hist(var$INGRESO, breaks = bins, main = "Histograma Ingreso")
+
+my_hist <- hist(var$INGRESO, breaks = bins, main = "Histograma", xlab = "Ingreso")
+my_hist$counts <- cumsum(my_hist$counts)
+plot(my_hist, main = "Histograma acumulado", xlab = "Ingreso")
+```
+
+También podemos crear histogramas con ggplot
+
+```{r}
+ggplot(var, aes(INGRESO)) +
+  geom_histogram(bins = 4) + 
+  labs(title = "Histograma", 
+       x = "Ingreso",
+       y = "Frequency") + 
+  theme_classic()
+
+ggplot(var, aes(INGRESO)) +
+  geom_histogram(aes(y = cumsum(..count..)), bins = 4) + 
+  labs(title = "Histograma acumulado", 
+       x = "Ingreso",
+       y = "Frequency") + 
+  theme_classic()
+```
+
+Los histogramas nos ayudan a conocer la distribución de la variable, la cual junto 
+con su forma, nos ayuda a entender el comportamiento de los datos.
+
+Los histogramas pueden ser simétricos. Lo que implica que su moda, media y mediana 
+son aproximadamente iguales:
+```{r}
+d <- read.csv("https://raw.githubusercontent.com/beduExpert/Programacion-R-Santander-2022/main/Sesion-03/Data/distribuciones.csv")
+
+hist(d$sim, main = "Distribución simétrica")
+Mode(d$sim)[1]; median(d$sim); mean(d$sim)
+
+hist(d$rs, main = "Distribución con sesgo a la derecha")
+Mode(d$rs)[1]; median(d$rs); mean(d$rs)
+
+hist(d$ls, main = "Distribución con sesgo a la izquierda")
+Mode(d$ls)[1]; median(d$ls); mean(d$ls)
+```
+
+Otra método gráfica para visulizar la distribución de una variable es a través de 
+diagramas de caja y brazo, los cuales se basan en los cuartiles de la distribución 
+y en su rango intercuartílico para mostrar datos extremos o atípicos.
+```{r}
+boxplot(d$sim, horizontal = TRUE)
+boxplot(d$rs, horizontal = TRUE)
+boxplot(d$ls, horizontal = TRUE)
+```
+
+## EJEMPLO 5: GRÁFICAS DE DISPERSIÓN Y CORRELACIÓN
+
+#### Objetivo
+- Conocer las medidas de asociación entre 2 variables cuantitativas
+- Aprender a constuir diagramas de disperisón
+
+#### Requisitos
+- Lectura de ficheros locales y desde algún repositorio en internet
+- Uso de `ggplot`
+
+#### Desarrollo
+
+##### Coeficiente de correlación de Pearson
+```{r}
+df <- diamonds
+cor(df$table, df$price)
+
+df.select <- select(df, price, carat, depth, table)
+corr_matrix <- round(cor(df.select),4)
+corr_matrix
+```
+
+##### Gráfica de dispersión
+```{r}
+ggplot(df, aes(x=carat, y=price)) + 
+  geom_point() +                                     
+  stat_smooth(method = "lm",
+              formula = y ~ x,
+              geom = "smooth") +
+  labs(title = "Gráfica de dispersión", 
+       x = "Carat",
+       y = "Price") + 
+  theme_classic()
+```
+
+## RETO 01: TABLAS DE DISTRIBUCIÓN DE FRECUENCIAS
+
+```{r}
+library(ggplot2)
+```
+
+"Para este reto vamos a hacer uso del dataframe diamonds, disponible en la librería 
+de ggplot2. Realiza los siguientes incisos y responde a las preguntas:"
+
+"1) ¿Qué tipo de variable y escala de medición tiene la variable cut?"
+Cualitativa ordinal
+
+"2) Reliza una tabla de frecuencias absolutas y relativas"
+```{r}
+freq <- table(diamonds$cut)
+transform(freq, 
+          rel.freq=prop.table(Freq))
+```
+
+
+"3) Para esta variable, ¿es posible calcular la frecuencia relativa acumulada? En 
+caso afirmativo, agrégala a tu tabla anterior"
+```{r}
+freq <- table(diamonds$cut)
+transform(freq, 
+          rel.freq=prop.table(Freq),
+          cum.freq=cumsum(prop.table(Freq)))
+```
+
+"4) Con base en tu tabla, responde:
+    - ¿Cuál es el porcentaje de diamantes que tienen un corte Very Good? 22.39%
+    - ¿Cuál es el porcentaje de diamantes que tienen un corte entre Fair y Very Good? 34.48%
+    - ¿Cuál es el porcentaje de diamantas que tienen un corte al menos Very Good? 87.92%"
+
+"5) Crea una tabla de distribución de frecuencias para el precio de los diamantes. Para ello 
+determina el número de clases con base en la regla de Sturges (1+3.3Log10(n))"
+
+```{r}
+k = ceiling(1 + 3.3*log10(length(diamonds$price)))
+ac = (max(diamonds$price)-min(diamonds$price))/k
+```
+
+```{r}
+bins <- seq(min(diamonds$price), max(diamonds$price), by = ac)
+
+```
+
+```{r}
+price.diamonds <- cut(diamonds$price, breaks = bins, include.lowest=TRUE, dig.lab = 10)
+```
+
+```{r}
+dist.freq <- table(price.diamonds)
+transform(dist.freq, 
+          rel.freq=prop.table(Freq), 
+          cum.freq=cumsum(prop.table(Freq)))
+```
+
+"6) Con base en tu tabla, responde:
+    - ¿Cuál es el porcentaje de diamantes que tienen un precio entre 3590.17 y 4678.23? 9.31%
+    - ¿Cuál es el porcentaje de diamantes que tienen un precio menor a 7942.41 85.74%
+    - ¿Cuál es el porcentaje de diamantes que tienen un precio mayor a 11206.58? 7.54%"
+
+## RETO 02: MEDIDAS DESCRIPTIVAS
+
+#### Objetivo
+- Utilizar medidas descriptivas y métodos gráficos para analizar variables.
+
+#### Requisitos
+- Tener previamente instalados R y Rstudio
+- Manejo de data frames
+- Graficas básicas
+
+#### Desarrollo
+```{r}
+library(ggplot2)
+```
+
+Para este reto vamos a hacer uso del dataframe `diamonds`, disponible en la librería 
+de ggplot2. Realiza los siguientes incisos y responde a las preguntas:
+
+1) Calcula e interpreta las medidas de tendencia central de la variable `price`
+```{r}
+library(DescTools)
+Mode(diamonds$price); median(diamonds$price); mean(diamonds$price)
+```
+
+2) Con base en tu resultado anteior, ¿qué se puede concluir respecto al sesgo del precio?
+
+3) Calcula e interpreta la desviación estándar y los cuartiles de la distribución:
+
+```{r}
+sd(diamonds$price)
+```
+
+```{r}
+quantile(diamonds$price, probs = c(0.25, 0.50, 0.75))
+# 25% de los diamantes tienen un precio de 950 o menos
+# 50% de los diamantes tienen un precio de 2401 o menos
+# 75% de los diamantes tienen un precio de 5324.25 o menos
+```
+
+4) Realiza un histograma de la variable precio. ¿Su distribución coincide con tu 
+conclusión de la pregunta 2?
+
+```{r}
+hist(diamonds$price)
+```
+
+5) Realiza un boxplot de la variable precio. ¿Su forma se relaciona con la distribución 
+mostrada por el histograma anteior? ¿Existen datos atípicos?
+
+```{r}
+boxplot(diamonds$price)
+```
+
+
+The `echo: false` option disables the printing of code (only output is displayed).
