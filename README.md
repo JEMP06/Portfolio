@@ -1,5 +1,5 @@
 # Portfolio
-Proyectos Guiados sobre Analisis y Ciencia de Datos: Se encuentran en la rama secundaria "Second Branch"
+Hola, aquí podrá encontrar los Proyectos Guiados sobre Analisis y Ciencia de Datos: Se encuentran en la rama secundaria "Second Branch"
 
 EDA & ML en Python guiados por actuario, instructores de YouTube y Kaggle Codigo
 EDA & Financial Markdown en R Studio personales y guiados por economista, instructores de Tec de Monterrey y Google Career
